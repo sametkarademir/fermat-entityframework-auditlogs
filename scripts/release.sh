@@ -3,7 +3,7 @@
 set -e
 
 # Project file path
-PROJECT_FILE="src/Fermat.EntityFramework.Shared/Fermat.EntityFramework.Shared.csproj"
+PROJECT_FILE="src/Fermat.EntityFramework.AuditLogs/Fermat.EntityFramework.AuditLogs.csproj"
 
 # Version type parameter (patch, minor, major)
 VERSION_TYPE=${1:-patch}
