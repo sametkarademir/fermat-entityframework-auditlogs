@@ -16,6 +16,7 @@ public class UserChangeBehaviorRequestValidator : AbstractValidator<UserChangeBe
 {
     public UserChangeBehaviorRequestValidator()
     {
+        Include(new DateRangeRequestValidator());
         RuleFor(x => x.UserId)
             .NotEmpty()
             .Must(x => x != Guid.Empty);

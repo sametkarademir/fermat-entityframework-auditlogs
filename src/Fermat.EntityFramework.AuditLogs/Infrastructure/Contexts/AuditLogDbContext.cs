@@ -1,9 +1,6 @@
 using Fermat.EntityFramework.AuditLogs.Domain.Entities;
-using Fermat.EntityFramework.AuditLogs.Domain.Options;
 using Fermat.EntityFramework.AuditLogs.Infrastructure.EntityConfigurations;
-using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
 
 namespace Fermat.EntityFramework.AuditLogs.Infrastructure.Contexts;
 

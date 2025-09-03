@@ -1,18 +1,18 @@
 using System.Text.Json.Serialization;
 using Fermat.EntityFramework.AuditLogs.Domain.Enums;
-using Fermat.EntityFramework.Shared.DTOs.Pagination;
-using Fermat.EntityFramework.Shared.DTOs.Sorting;
 using FluentValidation;
 
 namespace Fermat.EntityFramework.AuditLogs.Application.DTOs.AuditLogs;
 
-public class GetListAuditLogRequestDto : PageableRequestDto
+public class GetListAuditLogRequestDto
 {
     public string? EntityId { get; set; }
     public string? EntityName { get; set; }
     [JsonConverter(typeof(JsonStringEnumConverter))]
     public States? States { get; set; }
 
+    public int Page { get; set; } = 1;
+    public int PerPage { get; set; } = 25;
     public DateTime? StartDate { get; set; }
     public DateTime? EndDate { get; set; }
     public Guid? UserId { get; set; }

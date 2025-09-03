@@ -13,6 +13,7 @@ public class UserActivityAnalysisRequestValidator : AbstractValidator<UserActivi
 {
     public UserActivityAnalysisRequestValidator()
     {
+        Include(new DateRangeRequestValidator());
         RuleFor(x => x.UserId)
             .Must(x => x == null || x != Guid.Empty);
 

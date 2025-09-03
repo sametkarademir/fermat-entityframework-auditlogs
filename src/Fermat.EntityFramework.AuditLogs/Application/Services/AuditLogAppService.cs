@@ -26,15 +26,13 @@ public class AuditLogAppService(
     /// Retrieves an audit log entry by its unique identifier.
     /// </summary>
     /// <param name="id">The unique identifier of the audit log entry.</param>
-    /// <param name="cancellationToken">A token to cancel the operation.</param>
     /// <returns>The audit log entry if found; otherwise, entity not found exception.</returns>
-    public async Task<AuditLogResponseDto> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
+    public async Task<AuditLogResponseDto> GetByIdAsync(Guid id)
     {
         var matchedAuditLog = await auditLogRepository.GetAsync(
             id: id,
             include: item => item.Include(a => a.EntityPropertyChanges),
-            enableTracking: false,
-            cancellationToken: cancellationToken
+            enableTracking: false
         );
 
         return mapper.Map<AuditLogResponseDto>(matchedAuditLog);
@@ -44,9 +42,8 @@ public class AuditLogAppService(
     /// Retrieves a paginated list of audit log entries based on specified filtering criteria.
     /// </summary>
     /// <param name="request">The request containing pagination and filtering parameters.</param>
-    /// <param name="cancellationToken">A token to cancel the operation.</param>
     /// <returns>A paginated list of audit log entries.</returns>
-    public async Task<PageableResponseDto<AuditLogResponseDto>> GetPageableAndFilterAsync(GetListAuditLogRequestDto request, CancellationToken cancellationToken = default)
+    public async Task<PageableResponseDto<AuditLogResponseDto>> GetPageableAndFilterAsync(GetListAuditLogRequestDto request)
     {
         var queryable = auditLogRepository.GetQueryable();
         queryable = queryable.Include(item => item.EntityPropertyChanges);
@@ -62,7 +59,7 @@ public class AuditLogAppService(
         queryable = queryable.OrderByDescending(item => item.CreationTime);
 
         queryable = queryable.AsNoTracking();
-        var result = await queryable.ToPageableAsync(request.Page, request.PerPage, cancellationToken: cancellationToken);
+        var result = await queryable.ToPageableAsync(request.Page, request.PerPage);
         var mappedAuditLogs = mapper.Map<List<AuditLogResponseDto>>(result.Data);
 
         return new PageableResponseDto<AuditLogResponseDto>(mappedAuditLogs, result.Meta);
@@ -72,14 +69,13 @@ public class AuditLogAppService(
     /// Retrieves a summary of changes for a specific entity.
     /// </summary>
     /// <param name="request">The request containing entity identification and filtering criteria.</param>
-    /// <param name="cancellationToken">A token to cancel the operation.</param>
     /// <returns>A summary of changes for the specified entity.</returns>
     /// <remarks>
     /// This method aggregates changes made to a specific entity within a given date range,
     /// including the total number of changes and the most frequently modified properties.
     /// Take count of the top 10 most frequently modified properties.
     /// </remarks>
-    public async Task<EntityChangeSummaryResponseDto> GetEntityChangeSummaryAsync(GetEntityChangeSummaryRequestDto request, CancellationToken cancellationToken = default)
+    public async Task<EntityChangeSummaryResponseDto> GetEntityChangeSummaryAsync(GetEntityChangeSummaryRequestDto request)
     {
         var queryable = auditLogRepository.GetQueryable();
         queryable = queryable.Include(item => item.EntityPropertyChanges);
@@ -87,7 +83,7 @@ public class AuditLogAppService(
         queryable = queryable.Where(item => item.CreationTime >= request.StartDate && item.CreationTime <= request.EndDate);
         queryable = queryable.OrderBy(item => item.CreationTime);
         queryable = queryable.AsNoTracking();
-        var matchedAuditLogs = await queryable.ToListAsync(cancellationToken: cancellationToken);
+        var matchedAuditLogs = await queryable.ToListAsync();
         if (matchedAuditLogs.Count == 0)
         {
             return new EntityChangeSummaryResponseDto
@@ -135,16 +131,14 @@ public class AuditLogAppService(
     /// Retrieves all property changes associated with a specific audit log entry.
     /// </summary>
     /// <param name="auditLogId">The unique identifier of the audit log entry.</param>
-    /// <param name="cancellationToken">A token to cancel the operation.</param>
     /// <returns>A list of property changes for the specified audit log entry.</returns>
-    public async Task<List<EntityPropertyChangeResponseDto>> GetEntityPropertyChangesAsync(Guid auditLogId, CancellationToken cancellationToken = default)
+    public async Task<List<EntityPropertyChangeResponseDto>> GetEntityPropertyChangesAsync(Guid auditLogId)
     {
         var matchedEntityPropertyChanges = await entityPropertyChangeRepository
             .GetAllAsync(
                 item => item.AuditLogId == auditLogId,
                 orderBy: item => item.OrderBy(epc => epc.PropertyName),
-                enableTracking: false,
-                cancellationToken: cancellationToken
+                enableTracking: false
             );
         var mappedEntityPropertyChanges = mapper.Map<List<EntityPropertyChangeResponseDto>>(matchedEntityPropertyChanges);
 
@@ -155,13 +149,12 @@ public class AuditLogAppService(
     /// Removes audit log entries older than the specified date.
     /// </summary>
     /// <param name="olderThan">The cutoff date for removing old audit logs.</param>
-    /// <param name="cancellationToken">A token to cancel the operation.</param>
     /// <returns>The number of audit log entries that were removed.</returns>
-    public async Task<int> CleanupOldAuditLogsAsync(DateTime olderThan, CancellationToken cancellationToken = default)
+    public async Task<int> CleanupOldAuditLogsAsync(DateTime olderThan)
     {
         var queryable = auditLogRepository.GetQueryable();
         queryable = queryable.Where(a => a.CreationTime < olderThan);
-        var countToDelete = await queryable.CountAsync(cancellationToken);
+        var countToDelete = await queryable.CountAsync();
         if (countToDelete == 0)
         {
             return 0;
@@ -180,7 +173,7 @@ public class AuditLogAppService(
                 var auditLogsToDelete = await queryable
                     .OrderBy(a => a.CreationTime)
                     .Take(batchSize)
-                    .ToListAsync(cancellationToken);
+                    .ToListAsync();
 
                 if (auditLogsToDelete.Count == 0)
                 {
@@ -192,8 +185,8 @@ public class AuditLogAppService(
                     break;
                 }
 
-                await auditLogRepository.DeleteRangeAsync(auditLogsToDelete, cancellationToken: cancellationToken);
-                await auditLogRepository.SaveChangesAsync(cancellationToken);
+                await auditLogRepository.DeleteRangeAsync(auditLogsToDelete);
+                await auditLogRepository.SaveChangesAsync();
 
                 logger.LogInformation(
                     "[CleanupOldAuditLogsAsync] [Action=DeleteRangeAsync()] [Count={Count}] [End]",
@@ -201,20 +194,9 @@ public class AuditLogAppService(
                 );
 
                 totalDeleted += auditLogsToDelete.Count;
-
-                if (cancellationToken.IsCancellationRequested)
-                {
-                    logger.LogInformation(
-                        "[CleanupOldAuditLogsAsync] [Action=DeleteRangeAsync()] [Cancelled] [TotalDeleted={TotalDeleted}]",
-                        totalDeleted
-                    );
-
-                    break;
-                }
-
                 if (totalDeleted > 0 && totalDeleted % (batchSize * 5) == 0)
                 {
-                    await Task.Delay(500, cancellationToken);
+                    await Task.Delay(500);
                 }
             }
             catch (Exception e)
@@ -236,9 +218,8 @@ public class AuditLogAppService(
     /// Analyzes user activity patterns based on audit logs.
     /// </summary>
     /// <param name="request">The request containing analysis parameters.</param>
-    /// <param name="cancellationToken">A token to cancel the operation.</param>
     /// <returns>An analysis of user activity patterns.</returns>
-    public async Task<UserActivityAnalysisResponseDto> GetUserActivityAnalysisAsync(UserActivityAnalysisRequestDto request, CancellationToken cancellationToken = default)
+    public async Task<UserActivityAnalysisResponseDto> GetUserActivityAnalysisAsync(UserActivityAnalysisRequestDto request)
     {
         var queryable = auditLogRepository.GetQueryable();
         queryable = queryable.Include(item => item.EntityPropertyChanges);
@@ -246,7 +227,7 @@ public class AuditLogAppService(
         queryable = queryable.WhereIf(request.UserId.HasValue, item => item.CreatorId == request.UserId);
         queryable = queryable.WhereIf(!string.IsNullOrEmpty(request.EntityName), item => item.EntityName == request.EntityName);
         queryable = queryable.AsNoTracking();
-        var auditLogs = await queryable.ToListAsync(cancellationToken);
+        var auditLogs = await queryable.ToListAsync();
         if (auditLogs.Count == 0)
         {
             return new UserActivityAnalysisResponseDto
@@ -315,9 +296,8 @@ public class AuditLogAppService(
     /// Identifies the most frequently modified entities in the system.
     /// </summary>
     /// <param name="request">The request containing analysis parameters.</param>
-    /// <param name="cancellationToken">A token to cancel the operation.</param>
     /// <returns>A list of the most frequently modified entities.</returns>
-    public async Task<MostModifiedEntitiesResponseDto> GetMostModifiedEntitiesAsync(MostModifiedEntitiesRequestDto request, CancellationToken cancellationToken = default)
+    public async Task<MostModifiedEntitiesResponseDto> GetMostModifiedEntitiesAsync(MostModifiedEntitiesRequestDto request)
     {
         var queryable = auditLogRepository.GetQueryable();
         queryable = queryable.Include(item => item.EntityPropertyChanges);
@@ -325,7 +305,7 @@ public class AuditLogAppService(
         queryable = queryable.WhereIf(request.UserId.HasValue, item => item.CreatorId == request.UserId);
         queryable = queryable.WhereIf(request.EntityNames is { Count: > 0 }, item => request.EntityNames!.Contains(item.EntityName));
         queryable = queryable.AsNoTracking();
-        var auditLogs = await queryable.ToListAsync(cancellationToken);
+        var auditLogs = await queryable.ToListAsync();
         if (auditLogs.Count == 0)
         {
             return new MostModifiedEntitiesResponseDto
@@ -391,9 +371,8 @@ public class AuditLogAppService(
     /// Analyzes trends in entity changes over time.
     /// </summary>
     /// <param name="request">The request containing analysis parameters.</param>
-    /// <param name="cancellationToken">A token to cancel the operation.</param>
     /// <returns>An analysis of entity change trends.</returns>
-    public async Task<EntityChangesTrendResponseDto> AnalyzeEntityChangesTrendAsync(EntityChangesTrendRequestDto request, CancellationToken cancellationToken = default)
+    public async Task<EntityChangesTrendResponseDto> AnalyzeEntityChangesTrendAsync(EntityChangesTrendRequestDto request)
     {
         var startDateNormalized = request.StartDate.Date;
         var endDateNormalized = request.EndDate.Date.AddDays(1).AddTicks(-1);
@@ -406,7 +385,7 @@ public class AuditLogAppService(
             a.CreationTime.Date <= endDateNormalized.Date
         );
         queryable = queryable.AsNoTracking();
-        var auditLogs = await queryable.ToListAsync(cancellationToken);
+        var auditLogs = await queryable.ToListAsync();
         if (auditLogs.Count == 0)
         {
             return new EntityChangesTrendResponseDto
@@ -559,9 +538,8 @@ public class AuditLogAppService(
     /// Analyzes patterns in how users make changes to entities.
     /// </summary>
     /// <param name="request">The request containing analysis parameters.</param>
-    /// <param name="cancellationToken">A token to cancel the operation.</param>
     /// <returns>An analysis of user change behavior patterns.</returns>
-    public async Task<UserChangeBehaviorResponseDto> AnalyzeUserChangeBehaviorAsync(UserChangeBehaviorRequestDto request, CancellationToken cancellationToken = default)
+    public async Task<UserChangeBehaviorResponseDto> AnalyzeUserChangeBehaviorAsync(UserChangeBehaviorRequestDto request)
     {
         var queryable = auditLogRepository.GetQueryable();
         queryable = queryable.Include(a => a.EntityPropertyChanges);
@@ -570,7 +548,7 @@ public class AuditLogAppService(
         queryable = queryable.WhereIf(request.EntityNames is { Count: > 0 }, a => request.EntityNames!.Contains(a.EntityName));
         queryable = queryable.WhereIf(request.States is { Count: > 0 }, a => request.States!.Contains(a.State));
         queryable = queryable.AsNoTracking();
-        var auditLogs = await queryable.ToListAsync(cancellationToken);
+        var auditLogs = await queryable.ToListAsync();
         if (auditLogs.Count == 0)
         {
             return new UserChangeBehaviorResponseDto

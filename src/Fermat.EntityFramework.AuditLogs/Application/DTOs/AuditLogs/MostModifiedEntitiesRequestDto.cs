@@ -12,6 +12,7 @@ public class MostModifiedEntitiesRequestValidator : AbstractValidator<MostModifi
 {
     public MostModifiedEntitiesRequestValidator()
     {
+        Include(new DateRangeRequestValidator());
         RuleFor(x => x.EntityNames)
             .Must(x => x == null || x.Count <= 10)
             .ForEach(x => x.NotEmpty());
