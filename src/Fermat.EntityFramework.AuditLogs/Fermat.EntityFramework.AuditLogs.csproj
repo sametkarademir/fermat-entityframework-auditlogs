@@ -6,7 +6,7 @@
         <Nullable>enable</Nullable>
         <PackageId>Fermat.EntityFramework.AuditLogs</PackageId>
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-        <Version>0.0.1</Version>
+        <Version>0.0.2</Version>
         <Authors>Samet Karademir</Authors>
         <Description>A library that provides a comprehensive set of abstractions, base classes, and utilities for implementing audit logging in .NET applications.</Description>
         <PackageTags>audit-logs;entity-framework;domain-driven-design;ddd;entity;audit;convention;filter</PackageTags>
