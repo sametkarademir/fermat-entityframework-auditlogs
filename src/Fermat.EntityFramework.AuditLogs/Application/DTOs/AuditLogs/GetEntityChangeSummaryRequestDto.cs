@@ -12,6 +12,7 @@ public class GetEntityChangeSummaryRequestValidator : AbstractValidator<GetEntit
 {
     public GetEntityChangeSummaryRequestValidator()
     {
+        Include(new DateRangeRequestValidator());
         RuleFor(x => x.EntityId)
             .NotEmpty()
             .MaximumLength(100);

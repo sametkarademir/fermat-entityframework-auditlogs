@@ -16,6 +16,7 @@ public class EntityChangesTrendRequestValidator : AbstractValidator<EntityChange
 {
     public EntityChangesTrendRequestValidator()
     {
+        Include(new DateRangeRequestValidator());
         RuleFor(x => x.EntityName)
             .NotEmpty()
             .MaximumLength(500);
